@@ -1,0 +1,33 @@
+{
+  "name": "mce-orders-api",
+  "version": "1.0.0",
+  "description": "API for MCE Orders",
+  "main": "./src/server.ts",
+  "scripts": {
+    "dev": "tsx watch ./src/server.ts",
+    "build": "tsup src/server.ts --format esm --splitting --target node20 --out-dir dist",
+    "start": "node dist/server.js"
+  },
+  "keywords": [
+    "fastify",
+    "typescript",
+    "jwt",
+    "cors"
+  ],
+  "author": "@ecthon",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@fastify/cors": "^11.2.0",
+    "@fastify/jwt": "^10.0.0",
+    "dotenv": "^17.4.2",
+    "fastify": "^5.8.5",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
+  }
+}
