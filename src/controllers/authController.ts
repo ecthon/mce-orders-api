@@ -12,7 +12,26 @@ export interface IUser {
     createdAt: string
 }
 
-const users: IUser[] = []
+const users: IUser[] = [
+    {
+        id: 'c22c01e6-4051-4510-9e33-e74404de02ab',
+        firstName: 'admin',
+        lastName: 'admin',
+        cpf: '12345678901',
+        phone: '12345678901',
+        role: 'ADMIN',
+        createdAt: new Date().toISOString(),
+    },
+    {
+        id: 'a22c01e6-4051-4510-9e33-e74404de02ab',
+        firstName: 'Ecthon',
+        lastName: 'Almeida',
+        cpf: '12436462938',
+        phone: '994012345',
+        role: 'CUSTOMER',
+        createdAt: new Date().toISOString(),
+    }
+]
 
 export interface RegisterDTO {
     firstName: string
@@ -58,4 +77,26 @@ export async function registerHandler(
     const { createdAt, ...publicUser } = user
 
     return reply.status(201).send({ user: publicUser, token })
+}
+
+export async function loginHandler(
+    app: FastifyInstance,
+    data: LoginDTO,
+    reply: FastifyReply
+) {
+    const cpf = sanitizeCPF(data.cpf)
+
+    const user = users.find((user) => user.cpf === cpf)
+    if (!user) {
+        return reply.status(404).send({ error: 'Usuário não encontrado' })
+    }
+
+    const token = app.jwt.sign(
+        { sub: user.id, role: user.role },
+        { expiresIn: '7d' }
+    )
+
+    const { createdAt, ...publicUser } = user
+
+    return reply.status(200).send({ user: publicUser, token })
 }

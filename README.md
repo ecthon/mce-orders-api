@@ -85,6 +85,52 @@ Content-Type: application/json
 
 ---
 
+### `POST /auth/login`
+
+Realiza o login de um usuário utilizando o CPF. Para facilitar os testes, a API já possui dois usuários *mockados* em memória:
+- **Admin:** `12345678901`
+- **Cliente:** `12436462938`
+
+**URL:** `http://localhost:3333/auth/login`
+
+**Headers:**
+```
+Content-Type: application/json
+```
+
+**Body:**
+```json
+{
+  "cpf": "12345678901"
+}
+```
+
+*(O CPF também pode ser enviado com máscara: `"123.456.789-01"`)*
+
+**Resposta de sucesso (`200 OK`):**
+```json
+{
+  "user": {
+    "id": "c22c01e6-4051-4510-9e33-e74404de02ab",
+    "firstName": "admin",
+    "lastName": "admin",
+    "cpf": "12345678901",
+    "phone": "12345678901",
+    "role": "ADMIN"
+  },
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Resposta de erro — Usuário não encontrado (`404 Not Found`):**
+```json
+{
+  "error": "Usuário não encontrado"
+}
+```
+
+---
+
 ## Variáveis de ambiente
 
 Crie um arquivo `.env` na raiz do projeto:
