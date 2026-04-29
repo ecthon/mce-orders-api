@@ -1,5 +1,4 @@
 import type { FastifyInstance, FastifyReply } from "fastify"
-import fastifyJwt from '@fastify/jwt'
 import { sanitizeCPF } from "../utils/cpf.js"
 import { randomUUID } from "crypto"
 
