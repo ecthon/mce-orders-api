@@ -15,7 +15,7 @@ export interface EventItem {
     items: MenuItem[]
 }
 
-const events: EventItem[] = [
+export const events: EventItem[] = [
     {
         id: 'event-1',
         title: 'Almoço de domingo - Churrasquinho',
