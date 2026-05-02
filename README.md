@@ -23,7 +23,7 @@ npm install
 npm run dev
 ```
 
-O servidor sobe em `http://localhost:3333`.
+O servidor sobe em `http://localhost:3001` por padrão.
 
 ---
 
@@ -91,7 +91,7 @@ Realiza o login de um usuário utilizando o CPF. Para facilitar os testes, a API
 - **Admin:** `12345678901`
 - **Cliente:** `12436462938`
 
-**URL:** `http://localhost:3333/auth/login`
+**URL:** `http://localhost:3001/auth/login`
 
 **Headers:**
 ```
@@ -126,6 +126,116 @@ Content-Type: application/json
 ```json
 {
   "error": "Usuário não encontrado"
+}
+```
+
+---
+
+### `GET /events`
+
+Retorna eventos ativos por padrão.
+
+**URL:** `http://localhost:3001/events`
+
+**Query params:**
+- `active=true` — apenas eventos ativos
+- `active=false` — apenas eventos inativos
+- `all=true` — todos os eventos
+
+**Resposta de sucesso (`200 OK`):**
+```json
+{
+  "events": [
+    {
+      "id": "event-1",
+      "title": "Almoço de domingo - Churrasquinho",
+      "date": "20/10/2026",
+      "active": true,
+      "items": [
+        {
+          "id": 1,
+          "name": "Frango combo",
+          "description": "Espetinho de frango, arroz, farofa e batatonese.",
+          "price": 20.0
+        }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+### `GET /events/:id`
+
+Retorna um evento específico pelo `id`.
+
+**URL:** `http://localhost:3001/events/event-1`
+
+**Resposta de sucesso (`200 OK`):**
+```json
+{
+  "event": {
+    "id": "event-1",
+    "title": "Almoço de domingo - Churrasquinho",
+    "date": "20/10/2026",
+    "active": true,
+    "items": [
+      {
+        "id": 1,
+        "name": "Frango combo",
+        "description": "Espetinho de frango, arroz, farofa e batatonese.",
+        "price": 20.0
+      }
+    ]
+  }
+}
+```
+
+**Resposta de erro — Evento não encontrado (`404 Not Found`):**
+```json
+{
+  "error": "Evento não encontrado"
+}
+```
+
+---
+
+### `PATCH /events/:id/active`
+
+Ativa ou desativa um evento pelo `id`.
+
+**URL:** `http://localhost:3001/events/event-1/active`
+
+**Headers:**
+```
+Content-Type: application/json
+```
+
+**Body:**
+```json
+{
+  "active": false
+}
+```
+
+**Resposta de sucesso (`200 OK`):**
+```json
+{
+  "event": {
+    "id": "event-1",
+    "title": "Almoço de domingo - Churrasquinho",
+    "date": "20/10/2026",
+    "active": false,
+    "items": [
+      {
+        "id": 1,
+        "name": "Frango combo",
+        "description": "Espetinho de frango, arroz, farofa e batatonese.",
+        "price": 20.0
+      }
+    ]
+  }
 }
 ```
 
