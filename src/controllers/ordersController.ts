@@ -2,6 +2,7 @@ import type { FastifyReply, FastifyRequest } from "fastify"
 import { randomUUID } from "crypto"
 import type { EventItem, MenuItem } from "./eventsController.js"
 import { events } from "./eventsController.js"
+import { getUserById } from "./authController.js"
 
 export interface OrderItem {
     menuItemId: number
@@ -23,7 +24,50 @@ export interface Order {
 }
 
 // Simulando um "banco de dados" em memória
-const orders: Order[] = []
+const orders: Order[] = [
+    {
+        id: 'order-1',
+        userId: 'user-1',
+        eventId: 'event-1',
+        items: [
+            { menuItemId: 1, name: 'Frango combo', quantity: 2, priceAtOrder: 20.0 },
+            { menuItemId: 4, name: 'Carne simples', quantity: 1, priceAtOrder: 20.0 },
+        ],
+        observations: 'Sem cebola, por favor',
+        status: 'PENDING',
+        totalPrice: 60.0,
+        createdAt: '2026-09-10T10:00:00.000Z',
+        updatedAt: '2026-09-10T10:00:00.000Z',
+    },
+    {
+        id: 'order-2',
+        userId: 'user-2',
+        eventId: 'event-1',
+        items: [
+            { menuItemId: 3, name: 'Carne combo', quantity: 1, priceAtOrder: 30.0 },
+            { menuItemId: 2, name: 'Frango simples', quantity: 2, priceAtOrder: 15.0 },
+        ],
+        observations: null,
+        status: 'CONFIRMED',
+        totalPrice: 60.0,
+        createdAt: '2026-09-11T14:30:00.000Z',
+        updatedAt: '2026-09-11T14:35:00.000Z',
+    },
+    {
+        id: 'order-3',
+        userId: 'user-3',
+        eventId: 'event-2',
+        items: [
+            { menuItemId: 1, name: 'Rodízio de Massas', quantity: 1, priceAtOrder: 55.0 },
+            { menuItemId: 2, name: 'Sobremesa Especial', quantity: 1, priceAtOrder: 10.0 },
+        ],
+        observations: 'Adicionar molho à parte',
+        status: 'CANCELLED',
+        totalPrice: 65.0,
+        createdAt: '2026-09-12T19:00:00.000Z',
+        updatedAt: '2026-09-12T19:10:00.000Z',
+    },
+]
 
 export interface CreateOrderDTO {
     items: Array<{ menuItemId: number; quantity: number }>
@@ -74,6 +118,27 @@ function validateOrderItems(
     return { valid: true }
 }
 
+interface JwtUser {
+    sub: string
+    role?: 'CUSTOMER' | 'ADMIN'
+}
+
+function getUserId(request: FastifyRequest): string | null {
+    const user = request.user
+    if (typeof user === 'object' && user !== null && 'sub' in user && typeof (user as JwtUser).sub === 'string') {
+        return (user as JwtUser).sub
+    }
+    return null
+}
+
+function getUserRole(request: FastifyRequest): JwtUser['role'] | null {
+    const user = request.user
+    if (typeof user === 'object' && user !== null && 'role' in user && typeof (user as JwtUser).role === 'string') {
+        return (user as JwtUser).role
+    }
+    return null
+}
+
 /**
  * Cria um novo pedido
  */
@@ -84,7 +149,10 @@ export async function createOrderHandler(
     try {
         const { eventId } = request.params
         const { items, observations } = request.body
-        const userId = request.user.sub // Vem do JWT
+        const userId = getUserId(request)
+        if (!userId) {
+            return reply.status(401).send({ error: 'Usuário não autenticado' })
+        }
 
         // Valida se o evento existe
         const event = getEventById(eventId)
@@ -146,7 +214,10 @@ export async function getOrderByEventHandler(
 ) {
     try {
         const { eventId } = request.params
-        const userId = request.user.sub // Vem do JWT
+        const userId = getUserId(request)
+        if (!userId) {
+            return reply.status(401).send({ error: 'Usuário não autenticado' })
+        }
 
         // Valida se o evento existe
         const event = getEventById(eventId)
@@ -179,6 +250,58 @@ export async function getOrderByEventHandler(
 }
 
 /**
+ * Busca todos os pedidos (admin)
+ */
+export async function getAdminOrdersHandler(
+    request: FastifyRequest,
+    reply: FastifyReply
+) {
+    try {
+        const userId = getUserId(request)
+        const userRole = getUserRole(request)
+
+        if (!userId) {
+            return reply.status(401).send({ error: 'Usuário não autenticado' })
+        }
+
+        if (userRole !== 'ADMIN') {
+            return reply.status(403).send({ error: 'Acesso negado' })
+        }
+
+        const adminOrders = orders.map((order) => {
+            const orderUser = getUserById(order.userId)
+            const event = getEventById(order.eventId)
+
+            return {
+                ...order,
+                user: orderUser
+                    ? {
+                          id: orderUser.id,
+                          firstName: orderUser.firstName,
+                          lastName: orderUser.lastName,
+                          cpf: orderUser.cpf,
+                          phone: orderUser.phone,
+                      }
+                    : null,
+                event: event
+                    ? {
+                          id: event.id,
+                          title: event.title,
+                          date: event.date,
+                          active: event.active,
+                      }
+                    : null,
+            }
+        })
+
+        return reply.send({ orders: adminOrders })
+    } catch (error) {
+        console.error('Error fetching admin orders:', error)
+        return reply.status(500).send({ error: 'Erro ao buscar pedidos' })
+    }
+}
+
+/**
  * Atualiza um pedido existente
  */
 export async function updateOrderHandler(
@@ -188,7 +311,10 @@ export async function updateOrderHandler(
     try {
         const { orderId } = request.params
         const { items, observations } = request.body
-        const userId = request.user.sub // Vem do JWT
+        const userId = getUserId(request)
+        if (!userId) {
+            return reply.status(401).send({ error: 'Usuário não autenticado' })
+        }
 
         // Busca o pedido
         const order = orders.find((o) => o.id === orderId)
@@ -257,7 +383,10 @@ export async function cancelOrderHandler(
 ) {
     try {
         const { orderId } = request.params
-        const userId = request.user.sub // Vem do JWT
+        const userId = getUserId(request)
+        if (!userId) {
+            return reply.status(401).send({ error: 'Usuário não autenticado' })
+        }
 
         // Busca o pedido
         const order = orders.find((o) => o.id === orderId)

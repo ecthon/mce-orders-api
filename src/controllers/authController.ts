@@ -33,6 +33,10 @@ const users: IUser[] = [
     }
 ]
 
+export function getUserById(userId: string) {
+    return users.find((user) => user.id === userId)
+}
+
 export interface RegisterDTO {
     firstName: string
     lastName: string

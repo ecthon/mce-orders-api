@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify"
 import {
     createOrderHandler,
+    getAdminOrdersHandler,
     getOrderByEventHandler,
     updateOrderHandler,
     cancelOrderHandler,
@@ -8,6 +9,15 @@ import {
 
 class OrdersRoutes {
     constructor(app: FastifyInstance) {
+        // Buscar todos os pedidos (admin)
+        app.get(
+            '/orders',
+            { onRequest: [app.authenticate] },
+            async (request, reply) => {
+                return getAdminOrdersHandler(request, reply)
+            }
+        )
+
         // Criar novo pedido para um evento
         app.post<{ Params: { eventId: string }; Body: { items: Array<{ menuItemId: number; quantity: number }>; observations?: string | null } }>(
             '/orders/:eventId',
