@@ -160,6 +160,22 @@ export async function createOrderHandler(
             return reply.status(404).send({ error: 'Evento não encontrado' })
         }
 
+        // Valida se o evento está ativo
+        if (!event.active) {
+            return reply.status(400).send({ error: 'Este evento não está ativo. Não é possível criar pedidos.' })
+        }
+
+        // Valida se o usuário já tem um pedido ativo (não cancelado) para este evento
+        const existingOrder = orders.find(
+            (o) => o.userId === userId && o.eventId === eventId && o.status !== 'CANCELLED'
+        )
+        if (existingOrder) {
+            return reply.status(409).send({
+                error: 'Você já possui um pedido ativo para este evento. Edite seu pedido existente ao invés de criar um novo.',
+                orderId: existingOrder.id,
+            })
+        }
+
         // Valida os itens do pedido
         const validation = validateOrderItems(event, items)
         if (!validation.valid) {
@@ -332,10 +348,20 @@ export async function updateOrderHandler(
             return reply.status(400).send({ error: 'Não é possível alterar um pedido cancelado' })
         }
 
+        // Valida se o pedido já foi confirmado
+        if (order.status === 'CONFIRMED') {
+            return reply.status(400).send({ error: 'Pedidos confirmados não podem ser alterados. Cancele e crie um novo se necessário.' })
+        }
+
         // Busca o evento
         const event = getEventById(order.eventId)
         if (!event) {
             return reply.status(404).send({ error: 'Evento não encontrado' })
+        }
+
+        // Valida se o evento ainda está ativo
+        if (!event.active) {
+            return reply.status(400).send({ error: 'Este evento não está mais ativo. Não é possível editar pedidos.' })
         }
 
         // Valida os itens do pedido
@@ -404,6 +430,13 @@ export async function cancelOrderHandler(
             return reply.status(400).send({ error: 'Este pedido já foi cancelado' })
         }
 
+        // Valida se o pedido já foi confirmado (confirmados não podem ser cancelados através desta rota)
+        if (order.status === 'CONFIRMED') {
+            return reply.status(400).send({
+                error: 'Pedidos confirmados não podem ser cancelados pela rota de cancelamento. Entre em contato com o suporte.',
+            })
+        }
+
         // Cancela o pedido
         order.status = 'CANCELLED'
         order.updatedAt = new Date().toISOString()
@@ -412,5 +445,49 @@ export async function cancelOrderHandler(
     } catch (error) {
         console.error('Error cancelling order:', error)
         return reply.status(500).send({ error: 'Erro ao cancelar pedido' })
+    }
+}
+
+/**
+ * Confirma um pedido (somente para admin)
+ */
+export async function confirmOrderHandler(
+    request: FastifyRequest<{ Params: { orderId: string } }>,
+    reply: FastifyReply
+) {
+    try {
+        const { orderId } = request.params
+        const userId = getUserId(request)
+        const userRole = getUserRole(request)
+
+        if (!userId) {
+            return reply.status(401).send({ error: 'Usuário não autenticado' })
+        }
+
+        if (userRole !== 'ADMIN') {
+            return reply.status(403).send({ error: 'Apenas administradores podem confirmar pedidos' })
+        }
+
+        // Busca o pedido
+        const order = orders.find((o) => o.id === orderId)
+        if (!order) {
+            return reply.status(404).send({ error: 'Pedido não encontrado' })
+        }
+
+        // Valida se o pedido é PENDING
+        if (order.status !== 'PENDING') {
+            return reply.status(400).send({
+                error: `Pedido deve estar em status PENDING para ser confirmado. Status atual: ${order.status}`,
+            })
+        }
+
+        // Confirma o pedido
+        order.status = 'CONFIRMED'
+        order.updatedAt = new Date().toISOString()
+
+        return reply.send({ order })
+    } catch (error) {
+        console.error('Error confirming order:', error)
+        return reply.status(500).send({ error: 'Erro ao confirmar pedido' })
     }
 }

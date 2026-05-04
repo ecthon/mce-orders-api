@@ -5,6 +5,7 @@ import {
     getOrderByEventHandler,
     updateOrderHandler,
     cancelOrderHandler,
+    confirmOrderHandler,
 } from "../controllers/ordersController.js"
 
 class OrdersRoutes {
@@ -51,6 +52,15 @@ class OrdersRoutes {
             { onRequest: [app.authenticate] },
             async (request, reply) => {
                 return cancelOrderHandler(request, reply)
+            }
+        )
+
+        // Confirmar um pedido (admin)
+        app.patch<{ Params: { orderId: string } }>(
+            '/orders/:orderId/confirm',
+            { onRequest: [app.authenticate] },
+            async (request, reply) => {
+                return confirmOrderHandler(request, reply)
             }
         )
     }
